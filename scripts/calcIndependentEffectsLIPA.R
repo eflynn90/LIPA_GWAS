@@ -195,3 +195,6 @@ ggplot(temp_cols,aes(b_PU.1,b_GWAS)) +
   geom_hline(yintercept=0) +
   geom_vline(xintercept=0)
 
+
+
+
