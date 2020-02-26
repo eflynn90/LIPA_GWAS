@@ -1,0 +1,22 @@
+#!/bin/bash
+
+## get gene expr from every tissue
+for file in afc_deseq_log2_expression/*gz
+do
+	out_file=`basename $file | sed 's/bed.gz/ENSG00000107798.17.bed/'`
+	gunzip -c $file | head -n 1 > $out_file
+	zgrep ENSG00000107798.17 $file >> $out_file
+done
+
+
+
+## get gene expr from every tissue
+for file in afc_deseq_log2_expression/*gz
+do
+	out_file=by_tiss/`basename $file | sed 's/bed.gz/ENSG00000066336.bed/'`
+	gunzip -c $file | head -n 1 > $out_file
+	zgrep ENSG00000066336 $file >> $out_file
+done
+
+
+
