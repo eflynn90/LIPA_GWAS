@@ -1,0 +1,3 @@
+samp	snp	count	allele	read_count
+GM12891 LCL	rs1320496	alt_c	T	38
+GM12891 LCL	rs1320496	ref_c	C	7

@@ -1,0 +1,183 @@
+---
+title: "LIPA eQTL plots"
+output: html_notebook
+---
+
+
+```{r setup}
+
+library(dplyr)
+library(seqminer)
+library(tidyr)
+library(ggplot2)
+library(ggsci)
+library(ggrepel)
+library(scales)
+library(qqman)
+
+```
+
+
+# Fig 1B
+```{r}
+# blueprint_eqtls = read.table("../eQTL/blueprint_wp10_qtl_query_result_2021-03-13T00_53_02+01_00.tsv",
+#                              header=TRUE,sep='\t', comment.char = '')
+# 
+# blueprint_plot_data = blueprint_eqtls %>%
+#   mutate(log10_p.bonferroni = -log10(p.bonferroni)) %>%
+#   select(SNP, log10_p.bonferroni,X..an_group,cell_type)
+# write.table(blueprint_plot_data, "blueprint_eqtls.txt",
+#             col.names=TRUE,row.names = FALSE,
+#             sep='\t',quote=FALSE)
+blueprint_plot_data = read.table("blueprint_eqtls.txt",
+                                 header=TRUE, sep='\t')
+blueprint_plot_data %>% 
+  mutate(SNP = factor(SNP,
+                      levels=c("rs1412444","rs1332328","rs1332327","rs304412"))) %>%
+  ggplot(aes(SNP, log10_p.bonferroni)) +
+  geom_hline(yintercept=-log10(0.05)) +
+  geom_point(aes(col=`Cell.Type`)) +
+  geom_label_repel(aes(label=X..an_group),
+                   nudge_x=.3,nudge_y=1,
+                   size=3) +
+  theme_classic() +
+  ylab('-log10(Bonferroni-corrected eQTL p-value)') +
+  ggtitle("BluePrint LIPA eQTLs")
+
+```
+
+
+# Fig 2E
+```{r}
+# all_lms_cov = read.table("../ind_eff/all_lms_cov.rs1412445.txt",
+#                          header=TRUE,sep='\t')
+# orig_gwas = read.table("../GWAS/imputed_CARDIoGRAM_C4D_CAD_ADDITIVE.LIPA_region.txt",
+#                        header=TRUE,sep='\t')
+# cojo_gtex = read.table("../ind_eff/cojo/test_all_GTEx.cma.cojo",
+#                        header=TRUE, sep='\t')
+# 
+# lms_to_plot_eqtl = all_lms_cov %>%
+#   filter(tiss == 'Whole_Blood',
+#          model %in% c('lm_GWAS','lm_PU1','lm_int','lm_PU1_noGWAS')) %>%
+#   mutate(dataset='Blood eQTL')
+# 
+# lms_to_plot_orig_gwas = orig_gwas %>%
+#   filter(variant_id %in% c('rs1320496','rs1412445')) %>%
+#   mutate(term=panel_variant_id,
+#          b=effect_size, se=standard_error, p=pvalue,
+#          model=c('lm_PU1','lm_GWAS'),
+#          SNP=c('PU1','GWAS'),
+#          tiss='GWAS',
+#          dataset='CAD GWAS') %>%
+#   select(names(lms_to_plot_eqtl))
+# 
+# lms_to_plot_cond_gwas = cojo_gtex %>%
+#   filter(SNP == 'chr10_89243088_C_T_b38') %>%
+#   mutate(term=SNP,
+#          b=bC, se=bC_se, p=pC,
+#          model=c('lm_PU1_noGWAS'),
+#          SNP=c('PU1'),
+#          tiss='GWAS',
+#          dataset='CAD GWAS') %>%
+#   select(names(lms_to_plot_eqtl))
+# 
+# lms_to_plot = rbind(lms_to_plot_eqtl, lms_to_plot_orig_gwas) %>%
+#   rbind(lms_to_plot_cond_gwas) %>%
+#   mutate(model_lab = factor(ifelse(model=='lm_PU1', "rs1320496 only",
+#                               ifelse(model=='lm_GWAS', "rs1412445 only",
+#                                      ifelse(model=='lm_int', "interaction",
+#                                             ifelse(model=='lm_PU1_noGWAS',"rs1320496 conditional",'')))),
+#                               levels=c("rs1412445 only",'rs1320496 only','interaction','rs1320496 conditional'))) %>%
+#   mutate(`SNP/term`= ifelse(SNP=='GWAS','rs1412445',
+#                          ifelse(SNP=='PU1','rs1320496',
+#                                 ifelse(SNP=='int','interaction',''))))
+# 
+# write.table(lms_to_plot, "linear_effects.txt",
+#             col.names = TRUE, row.names=FALSE,sep='\t',quote=FALSE)
+
+lms_to_plot = read.table("linear_effects.txt",
+                         header=TRUE, sep='\t')
+
+lms_to_plot %>%
+  mutate(model_lab = factor(ifelse(model=='lm_PU1', "rs1320496 only",
+                              ifelse(model=='lm_GWAS', "rs1412445 only",
+                                     ifelse(model=='lm_int', "interaction",
+                                            ifelse(model=='lm_PU1_noGWAS',"rs1320496\nconditional",'')))),
+                              levels=c("rs1412445 only",'rs1320496 only','interaction','rs1320496\nconditional'))) %>%
+  ggplot(aes(model_lab, b)) +
+  geom_hline(yintercept=0) +
+  geom_linerange(aes(ymin = b-se, ymax = b+se, group=`SNP.term`),
+                 position=position_dodge(.2)) +
+  geom_point(aes(fill=`SNP.term`, shape=`SNP.term`,
+                 group=`SNP.term`),
+             position = position_dodge(.2),
+             size=2) +
+  scale_fill_manual(values=c('gray','chartreuse3','red')) +
+  scale_shape_manual(values=c(21,21,21)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=45,hjust=1)) +
+  facet_wrap(~dataset, scales = 'free') +
+  ylab("Effect Size") +
+  xlab("Model")
+
+
+```
+
+# Fig 2F
+```{r}
+# PU1_ENCODE_manual = data.frame(samp=rep('GM12891 LCL',6),
+#                                rep=c(1,1,1,2,2,2),
+#                                snp=factor(rep(c('rs1412445','rs1320496','rs1412444'),2),
+#                                           levels=c('rs1412445','rs1320496','rs1412444')),
+#                                ref_c=c(3,  4,1,  3,  3,1),
+#                                alt_c=c(19,  27,1,  18,  11,11)) %>%
+#   pivot_longer(cols=c(ref_c,alt_c), 
+#                names_to='count',
+#                values_to='read_count') %>%
+#   mutate(allele=ifelse(count=='ref_c','C',
+#                        ifelse(count=='alt_c','T','')))
+# write.table(PU1_ENCODE_manual, "SPI1_ASB_all.txt",
+#             col.names = TRUE, row.names = FALSE,
+#             sep='\t', quote=FALSE)
+
+PU1_encode = read.table("SPI1_ASB_all.txt",
+                        header=TRUE,sep='\t')
+
+PU1_encode %>%
+  ggplot(aes(snp,read_count)) +
+  geom_col(aes(fill=allele, group=allele),position=position_dodge()) +
+  theme_classic() +
+  scale_fill_manual(values=c('blue','red')) +
+  facet_wrap(~paste(samp,'rep',rep),
+             ncol=1) +
+  ylab('read count') +
+  xlab('SNP') +
+  ggtitle("SPI1 allele-specific ChIPseq binding")
+
+```
+
+
+# Fig 2G
+```{r}
+# PU1_encode_combined = PU1_encode %>%
+#   filter(snp=='rs1320496') %>%
+#   group_by(samp,snp,count,allele) %>%
+#   summarize(read_count = sum(read_count))
+# write.table(PU1_encode_combined, "SPI1_ASB_rs1320496_combined.txt",
+#             col.names=TRUE,row.names=FALSE,
+#             sep='\t', quote=FALSE)
+
+PU1_encode_combined = read.table("SPI1_ASB_rs1320496_combined.txt",
+                                 header=TRUE,sep='\t')
+
+PU1_encode_combined %>%
+  ggplot(aes(snp,read_count)) +
+  geom_col(aes(fill=allele, group=allele),position=position_dodge()) +
+  theme_classic() +
+  scale_fill_manual(values=c('blue','red')) +
+  ylab('read count') +
+  xlab('') +
+  ggtitle("SPI1 allele-specific ChIPseq binding")
+
+
+```
